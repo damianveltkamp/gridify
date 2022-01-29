@@ -32,8 +32,8 @@ const coordinates: Array<Coordinate> = [
   },
 ];
 
-const numberOfColumns: number = 10;
-const numberOfRows: number = 10;
+const numberOfColumns: number = 40;
+const numberOfRows: number = 14;
 
 export function calcGrid() {
   const verticalDistance: { left: number; right: number } = {
@@ -69,6 +69,7 @@ export function calcGrid() {
 
   console.log(horizontalRowCoordinates);
   console.log(squaresPerRow);
+  return squaresPerRow;
 }
 
 function getHorizontalRowCoordinates(verticalCoordinates: {

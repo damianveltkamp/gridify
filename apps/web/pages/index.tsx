@@ -1,9 +1,21 @@
-import { calcGrid } from "../helpers/calc-grid";
-export default function Web() {
-  calcGrid();
+import { Mapbox } from "../components/mapbox/Mapbox";
+
+interface Props {
+  mapboxAccessToken: string;
+}
+
+export default function Web({ mapboxAccessToken }: Props) {
   return (
     <div>
-      <h1>Web</h1>
+      <Mapbox mapboxAccessToken={mapboxAccessToken} />
     </div>
   );
+}
+
+export async function getServerSideProps() {
+  return {
+    props: {
+      mapboxAccessToken: process.env.MAPBOX_ACCESS_TOKEN,
+    },
+  };
 }
