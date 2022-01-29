@@ -65,7 +65,30 @@ export function calcGrid() {
   const horizontalRowCoordinates =
     getHorizontalRowCoordinates(verticalCoordinates);
 
-  const squaresPerRow = horizontalRowCoordinates.reduce(
+  const squaresPerRow = calculateSquares(horizontalRowCoordinates);
+
+  console.log(horizontalRowCoordinates);
+  console.log(squaresPerRow);
+}
+
+function getHorizontalRowCoordinates(verticalCoordinates: {
+  left: Array<Coordinate>;
+  right: Array<Coordinate>;
+}) {
+  return verticalCoordinates.left.map(
+    (coordinate: Coordinate, index: number) => {
+      const corespondingRightCoordinate = verticalCoordinates.right[index];
+      const bearing = calcBearing(coordinate, corespondingRightCoordinate);
+      const distance =
+        getDistance(coordinate, corespondingRightCoordinate) / numberOfColumns;
+
+      return calcCoords(coordinate, distance, bearing, numberOfColumns);
+    }
+  );
+}
+
+function calculateSquares(horizontalRowCoordinates: Array<Array<Coordinate>>) {
+  return horizontalRowCoordinates.reduce(
     (accumulator: any, rowCoordinates: Array<Coordinate>, rowIndex) => {
       if (rowIndex + 1 === horizontalRowCoordinates.length) {
         return accumulator;
@@ -110,24 +133,6 @@ export function calcGrid() {
       return accumulator;
     },
     []
-  );
-
-  console.log(squaresPerRow);
-}
-
-function getHorizontalRowCoordinates(verticalCoordinates: {
-  left: Array<Coordinate>;
-  right: Array<Coordinate>;
-}) {
-  return verticalCoordinates.left.map(
-    (coordinate: Coordinate, index: number) => {
-      const corespondingRightCoordinate = verticalCoordinates.right[index];
-      const bearing = calcBearing(coordinate, corespondingRightCoordinate);
-      const distance =
-        getDistance(coordinate, corespondingRightCoordinate) / numberOfColumns;
-
-      return calcCoords(coordinate, distance, bearing, numberOfColumns);
-    }
   );
 }
 
