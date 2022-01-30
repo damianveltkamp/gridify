@@ -4,10 +4,46 @@ import {
   getDistance,
 } from "geolib";
 
-interface Coordinate {
+type Grid = Array<Array<Coordinate>>;
+
+type GeoJson = {
+  type: string;
+  data: {
+    type: string;
+    features: Array<{
+      type: string;
+      geometry: { type: string; coordinates: Array<Array<[number, number]>> };
+    }>;
+  };
+};
+
+type Coordinate = {
   latitude: number;
   longitude: number;
-}
+};
+
+// const coordinates: Array<Coordinate> = [
+//   // Top left
+//   {
+//     latitude: 4.91455,
+//     longitude: 52.42753,
+//   },
+//   // Top right
+//   {
+//     latitude: 4.91836,
+//     longitude: 52.42685,
+//   },
+//   // Bottom left
+//   {
+//     latitude: 4.91364,
+//     longitude: 52.42636,
+//   },
+//   // Bottom right
+//   {
+//     latitude: 4.9174,
+//     longitude: 52.42555,
+//   },
+// ];
 
 const coordinates: Array<Coordinate> = [
   // Top left
@@ -35,7 +71,7 @@ const coordinates: Array<Coordinate> = [
 const numberOfColumns: number = 40;
 const numberOfRows: number = 14;
 
-export function calcGrid() {
+export function calcGridPoints() {
   const verticalDistance: { left: number; right: number } = {
     left: getDistance(coordinates[0], coordinates[2]) / numberOfRows,
     right: getDistance(coordinates[1], coordinates[3]) / numberOfRows,
@@ -65,11 +101,21 @@ export function calcGrid() {
   const horizontalRowCoordinates =
     getHorizontalRowCoordinates(verticalCoordinates);
 
-  const squaresPerRow = calculateSquares(horizontalRowCoordinates);
+  return horizontalRowCoordinates;
+}
 
-  console.log(horizontalRowCoordinates);
-  console.log(squaresPerRow);
-  return squaresPerRow;
+export function formatGeoJson(grid: Grid) {
+  const output = calculateSquares(grid);
+  return output;
+}
+
+export function getCenterOfGrid(grid: Grid) {
+  const roundedMiddleRowIndex: number = Math.round(grid.length / 2);
+  const roundedMiddleSquareIndex: number = Math.round(
+    grid[roundedMiddleRowIndex].length / 2
+  );
+
+  return grid[roundedMiddleRowIndex][roundedMiddleSquareIndex];
 }
 
 function getHorizontalRowCoordinates(verticalCoordinates: {
@@ -89,52 +135,54 @@ function getHorizontalRowCoordinates(verticalCoordinates: {
 }
 
 function calculateSquares(horizontalRowCoordinates: Array<Array<Coordinate>>) {
-  return horizontalRowCoordinates.reduce(
-    (accumulator: any, rowCoordinates: Array<Coordinate>, rowIndex) => {
+  const geoJsonOutput = {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [],
+    },
+  };
+
+  horizontalRowCoordinates.forEach(
+    (rowCoordinates: Array<Coordinate>, rowIndex) => {
       if (rowIndex + 1 === horizontalRowCoordinates.length) {
-        return accumulator;
+        return;
       }
 
-      const squares = rowCoordinates.reduce(
-        (
-          accumulator: Array<{
-            left: Coordinate;
-            right: Coordinate;
-            bottomLeft: Coordinate;
-            bottomRight: Coordinate;
-          }>,
-          coordinate: Coordinate,
-          coordinateIndex: number
-        ) => {
+      rowCoordinates.forEach(
+        (coordinate: Coordinate, coordinateIndex: number) => {
           if (coordinateIndex + 1 === rowCoordinates.length) {
-            return accumulator;
+            return;
           }
 
           // Get right neighbor coordinates
           const neighboringRightCoordinate =
             rowCoordinates[coordinateIndex + 1];
           // Get bottom neighbor coordinate
-          const neighboringBottomCoordinate =
+          const neighboringBottomLeftCoordinate =
             horizontalRowCoordinates[rowIndex + 1][coordinateIndex];
           // Get borrom right neighbor coordinate
           const neighboringBottomRightCoordinate =
             horizontalRowCoordinates[rowIndex + 1][coordinateIndex + 1];
 
-          accumulator.push({
-            left: coordinate,
-            right: neighboringRightCoordinate,
-            bottomLeft: neighboringBottomCoordinate,
-            bottomRight: neighboringBottomRightCoordinate,
-          });
-          return accumulator;
+          const geometry = convertToGeoJsonGeomatry(
+            coordinate,
+            neighboringRightCoordinate,
+            neighboringBottomLeftCoordinate,
+            neighboringBottomRightCoordinate
+          );
+
+          geoJsonOutput.data.features.push(geometry);
+
+          return;
         },
         []
       );
-      accumulator.push(squares);
-      return accumulator;
-    },
-    []
+      return;
+    }
   );
+
+  return geoJsonOutput;
 }
 
 function calcCoords(
@@ -158,4 +206,42 @@ function calcCoords(
 
 function calcBearing(leftCoordinate: Coordinate, rightCoordinate: Coordinate) {
   return getRhumbLineBearing(leftCoordinate, rightCoordinate);
+}
+
+function convertToGeoJsonGeomatry(
+  coordinate: Coordinate,
+  neighboringRightCoordinate: Coordinate,
+  neighboringBottomLeftCoordinate: Coordinate,
+  neighboringBottomRightCoordinate: Coordinate
+) {
+  const featureObject = {
+    type: "Feature",
+    geometry: {
+      type: "Polygon",
+      coordinates: [[]],
+    },
+  };
+
+  featureObject.geometry.coordinates[0].push([
+    coordinate.latitude,
+    coordinate.longitude,
+  ]);
+  featureObject.geometry.coordinates[0].push([
+    neighboringRightCoordinate.latitude,
+    neighboringRightCoordinate.longitude,
+  ]);
+  featureObject.geometry.coordinates[0].push([
+    neighboringBottomRightCoordinate.latitude,
+    neighboringBottomRightCoordinate.longitude,
+  ]);
+  featureObject.geometry.coordinates[0].push([
+    neighboringBottomLeftCoordinate.latitude,
+    neighboringBottomLeftCoordinate.longitude,
+  ]);
+  featureObject.geometry.coordinates[0].push([
+    coordinate.latitude,
+    coordinate.longitude,
+  ]);
+
+  return featureObject;
 }

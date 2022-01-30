@@ -1,35 +1,62 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import { calcGrid } from "../../helpers/calc-grid";
+import {
+  calcGridPoints,
+  formatGeoJson,
+  getCenterOfGrid,
+} from "../../helpers/calc-grid";
 import styles from "./stylesheet/Mapbox.module.scss";
+import { initD3 } from "../../helpers/d3";
 
 interface Props {
   mapboxAccessToken: string;
 }
 
 export const Mapbox = ({ mapboxAccessToken }: Props) => {
-  calcGrid();
-
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const [lng, setLng] = useState(-70.9);
-  const [lat, setLat] = useState(42.35);
   const [zoom, setZoom] = useState(9);
 
   useEffect(() => {
+    const grid = calcGridPoints();
+    const geoJson = formatGeoJson(grid);
+    const centerOfGrid = getCenterOfGrid(grid);
+
     mapboxgl.accessToken = mapboxAccessToken;
     if (map.current) return; // initialize map only once
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/streets-v11",
-      center: [lng, lat],
-      zoom: zoom,
+      center: [centerOfGrid.latitude, centerOfGrid.longitude],
+      zoom: 16,
     });
 
     map.current.dragRotate.disable();
     map.current.touchZoomRotate.disableRotation();
     map.current.on("load", () => {
-      console.log("loaded");
+      map.current.addSource("maine", geoJson);
+
+      map.current.addLayer({
+        id: "maine",
+        type: "fill",
+        source: "maine",
+        layout: {},
+        paint: {
+          "fill-color": "#0080ff",
+          "fill-opacity": 0.5,
+        },
+      });
+
+      map.current.addLayer({
+        id: "outline",
+        type: "line",
+        source: "maine",
+        layout: {},
+        paint: {
+          "line-color": "#000",
+          "line-width": 2,
+        },
+      });
     });
   }, []);
 
